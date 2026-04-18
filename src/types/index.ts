@@ -1,8 +1,8 @@
-// Re-exports for the generated type pipeline (#446).
+// Re-exports for types sourced from tmai-api-spec.
 //
-// The files under `./generated/` are produced by `scripts/generate-types.sh`
-// from Rust serde structs in `tmai-core` via ts-rs. Do not edit them by hand;
-// add #[derive(ts_rs::TS)] to the Rust source and regenerate.
+// Files under `./generated/` are a copy of the TypeScript distribution
+// published by https://github.com/trust-delta/tmai-api-spec. Do not edit
+// them by hand — update tmai-api-spec and re-sync. See ./README.md.
 
 export type { ActionOrigin } from "./generated/ActionOrigin";
 export type { CoreEvent } from "./generated/CoreEvent";

@@ -1,49 +1,53 @@
-# Generated type-sharing pipeline
+# Generated types
 
-The files under `./generated/` are produced by `scripts/generate-types.sh`
-from Rust `serde` structs in `crates/tmai-core/`. Do **not** hand-edit them —
-update the Rust source and regenerate.
+The files under `./generated/` mirror TypeScript types **published by
+[tmai-api-spec](https://github.com/trust-delta/tmai-api-spec)**. They
+originate from Rust `serde` structs in the private `tmai-core` repo, which
+runs [`ts-rs`](https://github.com/Aleph-Alpha/ts-rs) and
+[`utoipa`](https://github.com/juhaku/utoipa) internally and commits the
+output into `tmai-api-spec`. `tmai-react` only consumes the result.
+
+Do **not** hand-edit anything in `./generated/`.
 
 ## What lives where
 
-- `generated/*.ts` — TypeScript types derived by [`ts-rs`](https://github.com/Aleph-Alpha/ts-rs) from Rust types carrying `#[derive(TS)]`.
-- `generated/openapi.json` — OpenAPI 3 document derived by [`utoipa`](https://github.com/juhaku/utoipa).
+- `generated/*.ts` — TypeScript types for every public payload (`CoreEvent`,
+  `TaskMetaEntry`, `WorktreeInfo`, …).
+- `generated/openapi.json` — OpenAPI 3 document for the REST surface.
 - `index.ts` — barrel re-exports for consumers.
-- `sse-event.ts` — typed narrower that turns the untyped `SSEHandlers.onEvent` payload into a discriminated `CoreEvent`.
+- `sse-event.ts` — typed narrower that turns the untyped `SSEHandlers.onEvent`
+  payload into a discriminated `CoreEvent`.
 
-## How to regenerate
+## How to sync with tmai-api-spec
 
-```sh
-bash scripts/generate-types.sh
-git add crates/tmai-app/web/src/types/generated/
+When `tmai-api-spec` publishes a new version, refresh this tree by copying
+its distribution into `./generated/`:
+
+1. Pull the latest `tmai-api-spec` (tag or main).
+2. Replace the contents of `src/types/generated/` with the spec's published
+   TypeScript output (including `openapi.json`).
+3. If new top-level types were added, export them from `./index.ts`.
+4. Run `pnpm lint && pnpm test` to confirm the UI still type-checks.
+
+## Adding a new generated type to the barrel
+
+After syncing, if a consumer needs a newly added type:
+
+```ts
+// src/types/index.ts
+export type { NewPayload } from "./generated/NewPayload";
 ```
 
-CI's `types-drift` job re-runs the script and fails the build if the committed
-files differ from a fresh regeneration.
+Then import via the barrel:
 
-## Adding a new type to the pipeline
+```ts
+import type { NewPayload } from "@/types";
+```
 
-1. On the Rust struct or enum, add:
+## Why this indirection
 
-   ```rust
-   #[cfg_attr(feature = "ts-export", derive(ts_rs::TS))]
-   #[cfg_attr(
-       feature = "ts-export",
-       ts(export, export_to = "../../tmai-app/web/src/types/generated/")
-   )]
-   #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-   ```
-
-2. For enums that rename variants via `#[serde(rename_all = "...")]`, mirror
-   the setting on `ts(..., rename_all = "...")` so the TS tags stay in sync.
-
-3. Run `bash scripts/generate-types.sh` and commit the diff under `generated/`.
-
-4. Import the generated type via the barrel:
-
-   ```ts
-   import type { TaskMetaEntry } from "@/types";
-   ```
-
-See issue [#446](https://github.com/trust-delta/tmai/issues/446) for the
-PoC rationale and the migration plan for the remaining ~80 endpoints.
+`tmai-core` is private for IP reasons, but its wire shapes must be public so
+alternative UIs can be built. `tmai-api-spec` is that public surface — it is
+the single source of truth for this repo. If a shape looks wrong here, fix it
+in `tmai-core` → republish `tmai-api-spec` → re-sync, never patch
+`generated/` in place.

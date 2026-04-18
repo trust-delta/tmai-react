@@ -1,8 +1,18 @@
 # tmai-react
 
-React frontend for [tmai-core](https://github.com/trust-delta/tmai-core) — the standard WebUI implementation.
+Public reference WebUI for [tmai](https://github.com/trust-delta/tmai-core) — a React/TypeScript client that speaks the HTTP + SSE contract defined by [tmai-api-spec](https://github.com/trust-delta/tmai-api-spec).
 
-Connects to `tmai-core` via the HTTP + SSE contract defined in [tmai-api-spec](https://github.com/trust-delta/tmai-api-spec). Any UI that speaks the same contract can be used as a drop-in replacement; fork this repo or build your own.
+## Repository layout
+
+tmai was split into three repositories in April 2026:
+
+| Repo            | Visibility | Role                                                                           |
+| --------------- | ---------- | ------------------------------------------------------------------------------ |
+| `tmai-core`     | private    | Rust backend + agent runtime. Closed for IP protection.                        |
+| `tmai-api-spec` | public     | OpenAPI document + generated TypeScript types. The wire contract.              |
+| `tmai-react`    | public     | This repo. A reference UI built against `tmai-api-spec`.                       |
+
+The UI never imports from `tmai-core` directly — all coupling goes through `tmai-api-spec`.
 
 ## Stack
 
@@ -16,20 +26,24 @@ Connects to `tmai-core` via the HTTP + SSE contract defined in [tmai-api-spec](h
 
 ```bash
 pnpm install        # or: npm install
-pnpm dev            # vite dev server
+pnpm dev            # vite dev server on :1420
 pnpm build          # production bundle → dist/
 pnpm lint           # biome check
 pnpm test           # vitest
 ```
 
-The dev server expects `tmai-core` to be reachable. Point it at a running `tmai-core` instance via environment variables (see `vite.config.ts`).
+### Running against tmai-core locally
+
+The dev server expects a running `tmai-core` instance on localhost. `tmai-core` is private, so you need access to the repo to self-host it; there is no public managed endpoint. Point the UI at your local core via environment variables (see `vite.config.ts`).
 
 ## Contract
 
 This frontend consumes:
 
 - **HTTP REST API** — endpoints defined in [tmai-api-spec/openapi.json](https://github.com/trust-delta/tmai-api-spec/blob/main/openapi.json)
-- **SSE event stream** at `/api/events` — `CoreEvent` payloads (JSON Schema forthcoming)
+- **SSE event stream** at `/api/events` — `CoreEvent` payloads typed by `src/types/generated/`
+
+TypeScript types under `src/types/generated/` are **sourced from `tmai-api-spec`** — do not hand-edit. See [src/types/README.md](src/types/README.md) for how to sync them.
 
 Forward-compatibility rule: **unknown `CoreEvent` variants MUST be ignored** so newer `tmai-core` versions don't break older UI builds.
 
@@ -39,7 +53,7 @@ Forward-compatibility rule: **unknown `CoreEvent` variants MUST be ignored** so 
 
 ## Status
 
-This repo was extracted from the original [tmai](https://github.com/trust-delta/tmai) monorepo on 2026-04-18 as part of the [hybrid private core split](https://github.com/trust-delta/tmai-core) reorganization.
+Extracted from the original [tmai](https://github.com/trust-delta/tmai) monorepo on 2026-04-18 as part of the hybrid private-core reorganization.
 
 ## License
 
