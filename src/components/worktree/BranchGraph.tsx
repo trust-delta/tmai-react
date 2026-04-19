@@ -110,17 +110,19 @@ export function BranchGraph({
   // Kick off all panel data fetches. listBranches is initiated first so it
   // claims an HTTP connection slot before the slower supplementary requests.
   // gitGraph can be heavy on repos with many branches; listPrs / listIssues
-  // call `gh` under the hood and can stall on auth or rate limits. When all
-  // four fired simultaneously (#1) those three slow requests could saturate
-  // the browser's HTTP/1.1 connection pool, leaving listBranches queued
-  // indefinitely — "Loading branches..." never cleared.
+  // call `gh` under the hood and can stall on auth or rate limits. On startup
+  // multiple components (useAgents, useWorktrees, etc.) fire their own fetches
+  // concurrently; that shared pool means listBranches — if queued last — can
+  // wait indefinitely behind slower in-flight requests (#1).
   //
   // Each promise writes its own state slice independently so a hanging
   // optional fetch cannot wedge the others. The returned promise resolves as
   // soon as the branch list is in — that alone dismisses "Loading branches...".
   // (A prior all-or-nothing Promise.all caused #470 for the same reason.)
   const fetchData = useCallback(() => {
-    // listBranches fires first — it gets the first available connection slot.
+    // IMPORTANT: branchesPromise MUST be initiated first.
+    // Adding any other api.* fetch before this line risks re-introducing #1
+    // (listBranches gets queued behind slow requests and never dispatches).
     const branchesPromise = api
       .listBranches(projectPath)
       .then((branchResult) => {
