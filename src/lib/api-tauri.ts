@@ -108,6 +108,9 @@ export const api = {
   getPreview: (target: string) => httpApi.getPreview(target),
   getPreviewInput: (target: string, lines = 8) => httpApi.getPreviewInput(target, lines),
   getTranscript: (target: string) => httpApi.getTranscript(target),
+  getPromptQueue: (agentId: string) => httpApi.getPromptQueue(agentId),
+  cancelQueuedPrompt: (agentId: string, promptId: string) =>
+    httpApi.cancelQueuedPrompt(agentId, promptId),
 
   // Spawn
   spawnPty: (req: SpawnRequest) => httpApi.spawnPty(req),
