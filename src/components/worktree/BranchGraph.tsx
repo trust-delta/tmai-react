@@ -107,15 +107,28 @@ export function BranchGraph({
   const scrollRef = useRef<HTMLDivElement>(null);
   const savedScrollTop = useRef<number | null>(null);
 
-  // Kick off all panel data fetches in parallel. Each promise writes its
-  // own slice of state independently so one slow endpoint (e.g. `gh` CLI
-  // calls under `listPrs` / `listIssues` can stall on rate limits or auth
-  // prompts) cannot wedge the others. The returned promise resolves as
-  // soon as the branch list is in — that alone decides whether "Loading
-  // branches..." can be dismissed. A prior all-or-nothing `Promise.all`
-  // caused #470: a single hanging optional fetch kept `loading=true`
-  // forever because the top-level `.finally` never ran.
+  // Kick off all panel data fetches. listBranches is initiated first so it
+  // claims an HTTP connection slot before the slower supplementary requests.
+  // gitGraph can be heavy on repos with many branches; listPrs / listIssues
+  // call `gh` under the hood and can stall on auth or rate limits. On startup
+  // multiple components (useAgents, useWorktrees, etc.) fire their own fetches
+  // concurrently; that shared pool means listBranches — if queued last — can
+  // wait indefinitely behind slower in-flight requests (#1).
+  //
+  // Each promise writes its own state slice independently so a hanging
+  // optional fetch cannot wedge the others. The returned promise resolves as
+  // soon as the branch list is in — that alone dismisses "Loading branches...".
+  // (A prior all-or-nothing Promise.all caused #470 for the same reason.)
   const fetchData = useCallback(() => {
+    // IMPORTANT: branchesPromise MUST be initiated first.
+    // Adding any other api.* fetch before this line risks re-introducing #1
+    // (listBranches gets queued behind slow requests and never dispatches).
+    const branchesPromise = api
+      .listBranches(projectPath)
+      .then((branchResult) => {
+        setBranches(branchResult);
+      })
+      .catch(() => {});
     api
       .gitGraph(projectPath, graphLimit)
       .then((graphResult) => setGraphData(graphResult))
@@ -128,12 +141,7 @@ export function BranchGraph({
       .listIssues(projectPath)
       .then((issueResult) => setIssues(issueResult as IssueInfo[]))
       .catch(() => {});
-    return api
-      .listBranches(projectPath)
-      .then((branchResult) => {
-        setBranches(branchResult);
-      })
-      .catch(() => {});
+    return branchesPromise;
   }, [projectPath, graphLimit]);
 
   // Refresh branches (also refetches graph)
@@ -449,17 +457,18 @@ export function BranchGraph({
   }, [projectPath]);
 
   // Refetch branches + graph when the git monitor observes a transition
-  // (#423 — sibling SoT pattern for the git domain). Runs in parallel
-  // so the tree and the lane graph stay consistent. Independent of
-  // refetchPrs because a git-only change (e.g. local branch created,
-  // remote push observed) doesn't need a PR refetch.
+  // (#423 — sibling SoT pattern for the git domain). Uses independent fires
+  // instead of Promise.all so a slow gitGraph response (heavy on large repos)
+  // cannot block the branch-list update — same reasoning as fetchData (#1).
   const refetchGit = useCallback(() => {
     if (!projectPath) return;
-    Promise.all([api.listBranches(projectPath), api.gitGraph(projectPath, graphLimit)])
-      .then(([branchResult, graphResult]) => {
-        setBranches(branchResult);
-        setGraphData(graphResult);
-      })
+    api
+      .listBranches(projectPath)
+      .then((branchResult) => setBranches(branchResult))
+      .catch(() => {});
+    api
+      .gitGraph(projectPath, graphLimit)
+      .then((graphResult) => setGraphData(graphResult))
       .catch(() => {});
   }, [projectPath, graphLimit]);
 
