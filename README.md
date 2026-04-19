@@ -1,6 +1,8 @@
 # tmai-react
 
-Public reference WebUI for [tmai](https://github.com/trust-delta/tmai-core) — a React/TypeScript client that speaks the HTTP + SSE contract defined by [tmai-api-spec](https://github.com/trust-delta/tmai-api-spec).
+> 🏠 **Project hub**: [`trust-delta/tmai`](https://github.com/trust-delta/tmai) — start there for binary installs, overview, and a map of all sub-repos.
+
+Public reference WebUI for [tmai-core](https://github.com/trust-delta/tmai-core) — a React/TypeScript client that speaks the HTTP + SSE contract defined by [tmai-api-spec](https://github.com/trust-delta/tmai-api-spec).
 
 ## Repository layout
 
