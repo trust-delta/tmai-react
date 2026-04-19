@@ -434,7 +434,10 @@ export function computeLayout(
   );
 
   const laneW = computeLaneW(totalLanes);
-  const svgWidth = Math.max(LEFT_PAD + totalLanes * laneW + 500, 600);
+  // Symmetric padding: equal LEFT_PAD on both sides so lane 0's left margin
+  // matches lane N-1's right margin — prevents lane 0 from looking detached.
+  // The old formula included +500 for a label area that is now rendered in HTML.
+  const svgWidth = 2 * LEFT_PAD + totalLanes * laneW;
   const svgHeight = finalY + 40;
 
   return { lanes, rows, connections, laneW, svgWidth, svgHeight };
