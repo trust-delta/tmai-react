@@ -18,6 +18,13 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:9876",
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
   test: {
     globals: true,
