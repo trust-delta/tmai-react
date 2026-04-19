@@ -46,7 +46,7 @@ export const LaneGraph = memo(function LaneGraph({
   const [commitDetail, setCommitDetail] = useState<CommitDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { lanes, rows, connections, laneW, svgHeight } = layout;
+  const { lanes, rows, connections, laneW, svgHeight, svgWidth } = layout;
 
   // Build SHA → PrInfo map for placing PR badges at correct commit
   const prBySha = useMemo(() => {
@@ -56,9 +56,6 @@ export const LaneGraph = memo(function LaneGraph({
     }
     return map;
   }, [prMap]);
-
-  // SVG width = only the graph portion (lanes + padding)
-  const graphW = LEFT_PAD + lanes.length * laneW + 12;
 
   // Find which lane is selected
   const selectedLaneIdx = lanes.find((l) => l.branch === selectedBranch)?.laneIndex ?? -1;
@@ -161,8 +158,8 @@ export const LaneGraph = memo(function LaneGraph({
       style={{ minHeight: svgHeight }}
     >
       {/* Left: SVG graph (lanes, dots, curves) — fixed width */}
-      <div className="shrink-0" style={{ width: graphW }}>
-        <svg width={graphW} height={svgHeight} role="img" aria-label="Branch lane graph">
+      <div className="shrink-0" style={{ width: svgWidth }}>
+        <svg width={svgWidth} height={svgHeight} role="img" aria-label="Branch lane graph">
           <title>Branch lane graph</title>
           <defs>
             <filter id="lane-glow">
@@ -664,7 +661,7 @@ export const LaneGraph = memo(function LaneGraph({
         <div
           className="absolute z-10 rounded-lg border border-white/10 bg-zinc-900/95 shadow-xl backdrop-blur-sm"
           style={{
-            left: graphW + 8,
+            left: svgWidth + 8,
             top: expandedRow.y + ROW_H / 2 + 4,
             right: 16,
             minWidth: 280,
