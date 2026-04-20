@@ -9,10 +9,7 @@ import { api } from "@/lib/api";
 // onNewItem fires for each queue item that was not present in the previous
 // poll. Callers use this to surface incoming notifications in a UI surface
 // that is isolated from the conversation input (fixes #9).
-export function useQueuedPrompts(
-  agentId: string,
-  onNewItem?: (item: QueuedPrompt) => void,
-) {
+export function useQueuedPrompts(agentId: string, onNewItem?: (item: QueuedPrompt) => void) {
   const [items, setItems] = useState<QueuedPrompt[]>([]);
   // Track known IDs so we can fire onNewItem only for genuinely new arrivals.
   const knownIdsRef = useRef(new Set<string>());
@@ -50,6 +47,13 @@ export function useQueuedPrompts(
     },
     [agentId, refresh],
   );
+
+  // Reset known-IDs when switching agents so the onNewItem contract
+  // ("fire for genuinely new arrivals") starts fresh per agent.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on agent switch
+  useEffect(() => {
+    knownIdsRef.current = new Set();
+  }, [agentId]);
 
   useEffect(() => {
     refresh();
