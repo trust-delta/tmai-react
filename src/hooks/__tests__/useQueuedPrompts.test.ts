@@ -99,4 +99,55 @@ describe("useQueuedPrompts", () => {
     unmount();
     spy.mockRestore();
   });
+
+  // #9 — notifications must be surfaced separately from the conversation input
+  describe("onNewItem callback (fixes #9)", () => {
+    it("fires for items that are new since the previous poll", async () => {
+      const onNewItem = vi.fn();
+      vi.mocked(api.getPromptQueue).mockResolvedValue([ITEMS[0]]);
+
+      const { result } = renderHook(() => useQueuedPrompts("agent-1", onNewItem));
+      await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+      // First poll: both items are new
+      expect(onNewItem).toHaveBeenCalledTimes(1);
+      expect(onNewItem).toHaveBeenCalledWith(ITEMS[0]);
+    });
+
+    it("does NOT fire again for items already seen on a subsequent poll", async () => {
+      const onNewItem = vi.fn();
+      // First poll returns item 1
+      vi.mocked(api.getPromptQueue)
+        .mockResolvedValueOnce([ITEMS[0]])
+        // Second poll returns same item 1
+        .mockResolvedValue([ITEMS[0]]);
+
+      const { result } = renderHook(() => useQueuedPrompts("agent-1", onNewItem));
+      await waitFor(() => expect(result.current.items).toHaveLength(1));
+      expect(onNewItem).toHaveBeenCalledTimes(1);
+
+      // Trigger a manual refresh (simulates the 3-second interval)
+      await act(async () => { await result.current.refresh(); });
+      // Still only 1 call — item was already known
+      expect(onNewItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("fires for each genuinely new item when the queue grows", async () => {
+      const onNewItem = vi.fn();
+      // First poll: empty queue
+      vi.mocked(api.getPromptQueue)
+        .mockResolvedValueOnce([])
+        // Second poll: two new items
+        .mockResolvedValue(ITEMS);
+
+      const { result } = renderHook(() => useQueuedPrompts("agent-1", onNewItem));
+      await waitFor(() => expect(result.current.items).toHaveLength(0));
+      expect(onNewItem).not.toHaveBeenCalled();
+
+      await act(async () => { await result.current.refresh(); });
+      expect(onNewItem).toHaveBeenCalledTimes(2);
+      expect(onNewItem).toHaveBeenCalledWith(ITEMS[0]);
+      expect(onNewItem).toHaveBeenCalledWith(ITEMS[1]);
+    });
+  });
 });

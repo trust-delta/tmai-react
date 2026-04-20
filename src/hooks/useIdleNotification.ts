@@ -47,13 +47,17 @@ function ensurePermission(): Promise<boolean> {
   return Notification.requestPermission().then((p) => p === "granted");
 }
 
-/// Send a browser notification for an idle agent
-function sendNotification(agent: AgentSnapshot) {
+/// Send a browser notification for an idle agent.
+/// lastMessage, when provided, is surfaced in the notification body so the
+/// notification surface is the authoritative display — never the conversation input.
+function sendNotification(agent: AgentSnapshot, lastMessage?: string | null) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
 
   const title = `${agent.display_name} is now idle`;
   const projectName = agent.cwd.split("/").filter(Boolean).pop() || agent.cwd;
-  const body = `Agent in ${projectName} has finished processing.`;
+  const body = lastMessage
+    ? lastMessage.slice(0, 200)
+    : `Agent in ${projectName} has finished processing.`;
 
   new Notification(title, {
     body,
@@ -178,7 +182,7 @@ export function useIdleNotification(agents: AgentSnapshot[], config: IdleNotific
       // Cancel any pending timer
       if (idleState?.timerId) clearTimeout(idleState.timerId);
 
-      sendNotification(agent);
+      sendNotification(agent, data.last_assistant_message);
       stateMap.current.set(agent.id, {
         idleSince: Date.now(),
         timerId: null,

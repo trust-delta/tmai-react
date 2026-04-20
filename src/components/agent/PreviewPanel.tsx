@@ -5,7 +5,7 @@ import { QueueBadge } from "@/components/ui/QueueBadge";
 import { QueuePopover } from "@/components/ui/QueuePopover";
 import { useQueuedPrompts } from "@/hooks/useQueuedPrompts";
 import { api } from "@/lib/api";
-import type { PreviewSettingsResponse, TranscriptRecord } from "@/lib/api-http";
+import type { PreviewSettingsResponse, QueuedPrompt, TranscriptRecord } from "@/lib/api-http";
 import type { ActionOrigin } from "@/types";
 import {
   capHistoryLines,
@@ -120,7 +120,19 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
   const [showCursor, setShowCursor] = useState(true);
   const [focused, setFocused] = useState(true);
   const [queueOpen, setQueueOpen] = useState(false);
-  const { items: queueItems, cancel: cancelQueueItem } = useQueuedPrompts(agentId);
+  // Track the most-recently-arrived queued prompt to show an inline warning
+  // that is isolated from the conversation input (fixes #9).
+  const [incomingPrompt, setIncomingPrompt] = useState<string | null>(null);
+  const incomingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleNewQueueItem = useCallback((item: QueuedPrompt) => {
+    setIncomingPrompt(item.prompt);
+    if (incomingTimerRef.current) clearTimeout(incomingTimerRef.current);
+    incomingTimerRef.current = setTimeout(() => setIncomingPrompt(null), 5000);
+  }, []);
+  const { items: queueItems, cancel: cancelQueueItem } = useQueuedPrompts(
+    agentId,
+    handleNewQueueItem,
+  );
   const [composing, setComposing] = useState(false);
   // Mirror `composing` into a ref so fetchPreview / poll-tick closures can
   // read the current composition state without being re-created (which
@@ -386,6 +398,15 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
     return () => {
       for (const t of passthroughTimers.current) clearTimeout(t);
       passthroughTimers.current = [];
+    };
+  }, [agentId]);
+
+  // Clear incoming-prompt indicator on agent switch and on unmount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally clear on agent switch
+  useEffect(() => {
+    return () => {
+      if (incomingTimerRef.current) clearTimeout(incomingTimerRef.current);
+      setIncomingPrompt(null);
     };
   }, [agentId]);
 
@@ -729,6 +750,15 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
         spellCheck={false}
         tabIndex={-1}
       />
+
+      {/* Incoming-prompt banner — shown briefly when a new send_prompt item
+          arrives, keeping it isolated from the conversation input (#9). */}
+      {incomingPrompt && (
+        <div className="mx-3 mb-1 flex items-center gap-1.5 rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-400">
+          <span className="shrink-0">⚠ Incoming notification:</span>
+          <span className="truncate text-amber-300">{incomingPrompt}</span>
+        </div>
+      )}
 
       {/* Footer status bar */}
       <div className="flex items-center gap-2 border-t border-white/5 px-3 py-1">

@@ -44,6 +44,40 @@ describe("getDelay — notification delay based on detection source", () => {
   });
 });
 
+// #9 — last_assistant_message surfacing in browser notification body
+describe("sendNotification body — last_assistant_message isolation (#9)", () => {
+  // Pure logic test: document the expected body selection rule.
+  // When last_assistant_message is present it becomes the notification body
+  // so that the notification surface, not the conversation input, is the
+  // authoritative display for notification content.
+  function resolveBody(lastMessage: string | null | undefined, projectName: string): string {
+    return lastMessage
+      ? lastMessage.slice(0, 200)
+      : `Agent in ${projectName} has finished processing.`;
+  }
+
+  test("uses last_assistant_message as body when present", () => {
+    const body = resolveBody("PR #77 を作成しました", "tmai-core");
+    expect(body).toBe("PR #77 を作成しました");
+  });
+
+  test("truncates last_assistant_message to 200 chars", () => {
+    const long = "x".repeat(300);
+    const body = resolveBody(long, "tmai-core");
+    expect(body).toHaveLength(200);
+  });
+
+  test("falls back to generic body when last_assistant_message is null", () => {
+    const body = resolveBody(null, "tmai-core");
+    expect(body).toBe("Agent in tmai-core has finished processing.");
+  });
+
+  test("falls back to generic body when last_assistant_message is undefined", () => {
+    const body = resolveBody(undefined, "tmai-core");
+    expect(body).toBe("Agent in tmai-core has finished processing.");
+  });
+});
+
 describe("notification trigger conditions", () => {
   // These tests document the expected behavior of status transitions
 

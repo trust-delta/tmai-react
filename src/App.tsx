@@ -50,9 +50,13 @@ export function App() {
   useSSE({
     onEvent: (eventName, data) => {
       if (eventName === "agent_stopped") {
-        handleAgentStopped(
-          data as { target: string; cwd: string; last_assistant_message?: string },
-        );
+        const d = data as { target: string; cwd: string; last_assistant_message?: string };
+        handleAgentStopped(d);
+        // Surface last_assistant_message in the toast so it appears in an isolated
+        // UI surface — not in the conversation input (fixes #9).
+        if (d.last_assistant_message) {
+          toastInfo(d.last_assistant_message);
+        }
       }
     },
   });
