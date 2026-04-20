@@ -18,7 +18,8 @@ function okResponse(): Response {
 }
 
 function lastOriginHeader(): Record<string, unknown> | null {
-  const call = mockFetch.mock.calls.at(-1);
+  const calls = mockFetch.mock.calls;
+  const call = calls.length > 0 ? calls[calls.length - 1] : undefined;
   if (!call) return null;
   const opts = call[1] as RequestInit;
   const headers = opts.headers as Record<string, string>;

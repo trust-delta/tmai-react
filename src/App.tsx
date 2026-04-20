@@ -20,7 +20,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useSplitPane } from "@/hooks/useSplitPane";
 import { useWorktrees } from "@/hooks/useWorktrees";
-import { api, isAiAgent, setCallerCwd, type Selection, statusName } from "@/lib/api";
+import { api, isAiAgent, type Selection, setCallerCwd, statusName } from "@/lib/api";
 import { useSSE } from "@/lib/sse-provider";
 
 export function App() {

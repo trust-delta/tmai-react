@@ -42,8 +42,10 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.token}`,
-      ...originHeaders,
       ...options.headers,
+      // X-Tmai-Origin is authoritative for fail-closed scope; spread LAST
+      // so callers cannot override it via options.headers.
+      ...originHeaders,
     },
   });
   if (!res.ok) {
