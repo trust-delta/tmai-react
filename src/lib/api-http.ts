@@ -13,14 +13,36 @@ function getConfig(): { baseUrl: string; token: string } {
 
 const config = getConfig();
 
+// Updated by setCallerCwd() in App.tsx whenever the selected project changes.
+// Injected into X-Tmai-Origin on state-changing requests so the orchestrator
+// can resolve the source project for fail-closed notification scoping.
+let callerCwd: string | null = null;
+
+export function setCallerCwd(cwd: string | null): void {
+  callerCwd = cwd;
+}
+
+const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 // Authenticated fetch helper
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${config.baseUrl}/api${path}`;
+  const method = (options.method ?? "GET").toUpperCase();
+  const originHeaders: Record<string, string> = {};
+  if (STATE_CHANGING_METHODS.has(method)) {
+    const origin: { kind: "Human"; interface: string; cwd?: string } = {
+      kind: "Human",
+      interface: "webui",
+      ...(callerCwd !== null ? { cwd: callerCwd } : {}),
+    };
+    originHeaders["X-Tmai-Origin"] = JSON.stringify(origin);
+  }
   const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.token}`,
+      ...originHeaders,
       ...options.headers,
     },
   });

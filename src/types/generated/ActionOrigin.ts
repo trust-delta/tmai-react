@@ -13,6 +13,11 @@ export type ActionOrigin =
        * Which interface: "webui", "tui", "mobile", "cli", etc.
        */
       interface: string;
+      /**
+       * Caller working directory — the currently-selected project root.
+       * Omitted when no project is selected (server accepts missing field via serde default).
+       */
+      cwd?: string;
     }
   | {
       kind: "Agent";
