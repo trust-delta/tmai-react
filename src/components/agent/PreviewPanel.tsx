@@ -164,6 +164,10 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Tracks whether the current mousedown originated in input mode and triggered
+  // a preemptive enterSelectMode(). On mouseup we check this to cancel the
+  // mode switch when no text was actually selected (plain click, no drag).
+  const pendingSelectRef = useRef(false);
 
   // Measure character columns that fit in the preview container
   const [cols, setCols] = useState(0);
@@ -602,17 +606,18 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
   }, [historyHtml]);
 
   useEffect(() => {
-    if (liveRef.current) {
-      const sel = window.getSelection();
-      const hasSelection = sel && sel.toString().length > 0;
-      if (!hasSelection && liveHtml !== lastLiveHtmlRef.current) {
-        lastLiveHtmlRef.current = liveHtml;
-        liveRef.current.innerHTML = DOMPurify.sanitize(liveHtml, {
-          ADD_ATTR: ["data-tmai-cursor"],
-        });
-      }
+    const sel = window.getSelection();
+    const hasSelection = !!(sel && sel.toString().length > 0);
+
+    if (liveRef.current && !hasSelection && liveHtml !== lastLiveHtmlRef.current) {
+      lastLiveHtmlRef.current = liveHtml;
+      liveRef.current.innerHTML = DOMPurify.sanitize(liveHtml, {
+        ADD_ATTR: ["data-tmai-cursor"],
+      });
     }
-    if (autoScroll) {
+    // Guard auto-scroll against active text selection: jumping the viewport
+    // while the user is dragging to select text destroys the selection anchor.
+    if (autoScroll && !hasSelection) {
       bottomRef.current?.scrollIntoView({ behavior: "instant" });
     }
 
@@ -634,8 +639,9 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
       setCursorStyle(null);
       return;
     }
-
-    const lineH = 13 * 1.35;
+    // Measure the actual rendered line height rather than hardcoding font
+    // metrics; the span carries the same font stack as the preview content.
+    const lineH = charSpan.getBoundingClientRect().height || 13 * 1.35;
     setCursorStyle({
       left: `${marker.offsetLeft}px`,
       top: `${marker.offsetTop}px`,
@@ -658,16 +664,28 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
         ref={scrollContainerRef}
         onScroll={handleScroll}
         onMouseDown={() => {
-          if (focused) enterSelectMode();
+          if (focused) {
+            // Switch to select mode so keystrokes aren't sent while the user
+            // drags. On mouseup we cancel this if no text was actually selected.
+            enterSelectMode();
+            pendingSelectRef.current = true;
+          }
         }}
         onMouseUp={() => {
-          // If no text was selected (just a click), return to input mode.
-          // Also handles re-focus when clicking back from the right panel.
+          const sel = window.getSelection();
+          const hasSelection = !!(sel && sel.toString().length > 0);
+          if (pendingSelectRef.current) {
+            // mousedown came from input mode — only stay in select mode if the
+            // user actually dragged out a selection; a plain click returns to
+            // input mode so the user isn't unexpectedly locked out of typing.
+            pendingSelectRef.current = false;
+            if (!hasSelection) enterInputMode();
+            return;
+          }
+          // In select mode (via button) or re-focusing from another panel:
+          // a click with no selection returns to input mode.
           if (!focused || !hasDomFocus) {
-            const sel = window.getSelection();
-            if (!sel || sel.toString().length === 0) {
-              enterInputMode();
-            }
+            if (!hasSelection) enterInputMode();
           }
         }}
         className={`flex-1 overflow-y-auto p-3 text-[13px] leading-[1.35] ${
