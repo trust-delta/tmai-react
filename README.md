@@ -53,6 +53,12 @@ Forward-compatibility rule: **unknown `CoreEvent` variants MUST be ignored** so 
 
 `tmai-react` is one of several possible UIs. The contract is intentionally UI-agnostic — use Vue, Svelte, Solid, or anything else that speaks HTTP + SSE. Fork this repo as a starting point, or begin from scratch against `tmai-api-spec`.
 
+## Changelog
+
+`CHANGELOG.md` is generated automatically by [git-cliff](https://git-cliff.org/) from
+[Conventional Commit](https://www.conventionalcommits.org/) messages — do not hand-edit it.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the release workflow and commit conventions.
+
 ## Status
 
 Extracted from the original [tmai](https://github.com/trust-delta/tmai) monorepo on 2026-04-18 as part of the hybrid private-core reorganization.
