@@ -20,7 +20,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useSplitPane } from "@/hooks/useSplitPane";
 import { useWorktrees } from "@/hooks/useWorktrees";
-import { api, isAiAgent, type Selection, statusName } from "@/lib/api";
+import { api, isAiAgent, type Selection, setCallerCwd, statusName } from "@/lib/api";
 import { useSSE } from "@/lib/sse-provider";
 
 export function App() {
@@ -103,6 +103,11 @@ export function App() {
   useEffect(() => {
     refreshProjects();
   }, [refreshProjects]);
+
+  // Sync selected project into the API client so X-Tmai-Origin carries cwd.
+  useEffect(() => {
+    setCallerCwd(currentProject);
+  }, [currentProject]);
 
   // Split agents into AI agents and plain terminals
   const aiAgents = useMemo(() => agents.filter((a) => isAiAgent(a.agent_type)), [agents]);
