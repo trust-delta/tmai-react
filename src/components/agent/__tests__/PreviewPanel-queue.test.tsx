@@ -32,7 +32,12 @@ const { api } = await import("@/lib/api");
 const { PreviewPanel } = await import("../PreviewPanel");
 
 const QUEUED: QueuedPrompt[] = [
-  { id: "q1", prompt: "run the tests", queued_at: "2026-04-20T10:00:00Z", origin: "orchestrator" },
+  {
+    id: "q1",
+    prompt: "run the tests",
+    queued_at: "2026-04-20T10:00:00Z",
+    origin: { kind: "Agent", id: "main:0.0", is_orchestrator: true },
+  },
 ];
 
 describe("PreviewPanel queue badge", () => {

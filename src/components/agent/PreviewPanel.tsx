@@ -6,6 +6,7 @@ import { QueuePopover } from "@/components/ui/QueuePopover";
 import { useQueuedPrompts } from "@/hooks/useQueuedPrompts";
 import { api } from "@/lib/api";
 import type { PreviewSettingsResponse, TranscriptRecord } from "@/lib/api-http";
+import type { ActionOrigin } from "@/types";
 import {
   capHistoryLines,
   charColumns,
@@ -64,6 +65,19 @@ function toTmuxKey(e: KeyboardEvent): string | null {
       return "Space";
     default:
       return null;
+  }
+}
+
+// Render an ActionOrigin discriminated union as a compact label, e.g.
+// "Human:webui", "Agent:main:0.0", "System:pr_monitor"
+function originLabel(o: ActionOrigin): string {
+  switch (o.kind) {
+    case "Human":
+      return `Human:${o.interface}`;
+    case "Agent":
+      return `Agent:${o.id}`;
+    case "System":
+      return `System:${o.subsystem}`;
   }
 }
 
@@ -778,7 +792,7 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
                   {item.prompt}
                 </p>
                 <p className="mt-0.5 text-[10px] text-zinc-500">
-                  {item.origin && <span className="mr-2">{item.origin}</span>}
+                  {item.origin && <span className="mr-2">{originLabel(item.origin)}</span>}
                   {new Date(item.queued_at).toLocaleTimeString()}
                 </p>
               </div>

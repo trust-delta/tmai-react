@@ -22,8 +22,10 @@ export function useQueuedPrompts(agentId: string) {
       setItems((prev) => prev.filter((item) => item.id !== promptId));
       try {
         await api.cancelQueuedPrompt(agentId, promptId);
+        // Both "cancelled" and "already_drained" are success statuses —
+        // the optimistic remove already matches reality; no re-sync needed.
       } catch {
-        // "Already delivered" is a benign race; re-sync to get accurate state.
+        // Actual failure (network, 404 on unknown agent, etc.) — re-sync.
         refresh();
       }
     },

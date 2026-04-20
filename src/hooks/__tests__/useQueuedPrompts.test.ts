@@ -53,8 +53,32 @@ describe("useQueuedPrompts", () => {
     expect(result.current.items[0].id).toBe("2");
   });
 
-  it("re-syncs via refresh after a failed cancel", async () => {
-    vi.mocked(api.cancelQueuedPrompt).mockRejectedValue(new Error("already delivered"));
+  it("does NOT re-sync when cancel returns 'cancelled'", async () => {
+    vi.mocked(api.cancelQueuedPrompt).mockResolvedValue({ status: "cancelled" });
+    const { result } = renderHook(() => useQueuedPrompts("agent-1"));
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+
+    const callsBefore = vi.mocked(api.getPromptQueue).mock.calls.length;
+    await act(async () => {
+      await result.current.cancel("1");
+    });
+    expect(vi.mocked(api.getPromptQueue).mock.calls.length).toBe(callsBefore);
+  });
+
+  it("does NOT re-sync when cancel returns 'already_drained' (idempotent success)", async () => {
+    vi.mocked(api.cancelQueuedPrompt).mockResolvedValue({ status: "already_drained" });
+    const { result } = renderHook(() => useQueuedPrompts("agent-1"));
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+
+    const callsBefore = vi.mocked(api.getPromptQueue).mock.calls.length;
+    await act(async () => {
+      await result.current.cancel("1");
+    });
+    expect(vi.mocked(api.getPromptQueue).mock.calls.length).toBe(callsBefore);
+  });
+
+  it("re-syncs via refresh after an actual failure (network / 404)", async () => {
+    vi.mocked(api.cancelQueuedPrompt).mockRejectedValue(new Error("404 Not Found"));
     const { result } = renderHook(() => useQueuedPrompts("agent-1"));
     await waitFor(() => expect(result.current.items).toHaveLength(2));
 
@@ -70,7 +94,6 @@ describe("useQueuedPrompts", () => {
   it("registers a 3 s polling interval on mount", () => {
     const spy = vi.spyOn(global, "setInterval");
     const { unmount } = renderHook(() => useQueuedPrompts("agent-1"));
-    // The hook should register exactly one interval with a 3000 ms delay
     const intervals = spy.mock.calls.filter(([, ms]) => ms === 3000);
     expect(intervals).toHaveLength(1);
     unmount();

@@ -148,11 +148,13 @@ export interface AgentSnapshot {
 
 // ── Prompt Queue ──
 
+import type { ActionOrigin } from "@/types";
+
 export interface QueuedPrompt {
   id: string;
   prompt: string;
-  queued_at: string; // ISO 8601
-  origin?: string;
+  queued_at: string; // RFC 3339
+  origin?: ActionOrigin;
 }
 
 // ── Project grouping ──
@@ -844,7 +846,7 @@ export const api = {
   getPromptQueue: (agentId: string) =>
     apiFetch<QueuedPrompt[]>(`/agents/${encodeURIComponent(agentId)}/prompt-queue`),
   cancelQueuedPrompt: (agentId: string, promptId: string) =>
-    apiFetch<{ status: string }>(
+    apiFetch<{ status: "cancelled" | "already_drained" }>(
       `/agents/${encodeURIComponent(agentId)}/prompt-queue/${encodeURIComponent(promptId)}`,
       { method: "DELETE" },
     ),
