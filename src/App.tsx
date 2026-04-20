@@ -82,8 +82,16 @@ export function App() {
   } = useSplitPane();
 
   // Responsive layout state (sidebar & action panel collapse)
-  const { sidebarCollapsed, toggleSidebar, actionPanelCollapsed, toggleActionPanel } =
-    useResponsiveLayout();
+  const {
+    sidebarCollapsed,
+    toggleSidebar,
+    actionPanelCollapsed,
+    toggleActionPanel,
+    isMobileScreen,
+    mobileDrawerOpen,
+    toggleMobileDrawer,
+    closeMobileDrawer,
+  } = useResponsiveLayout();
 
   // Fetch registered projects on mount and on demand
   const refreshProjects = useCallback(() => {
@@ -137,12 +145,16 @@ export function App() {
     [refresh, toastSuccess],
   );
 
-  // Select handler for agents
-  const handleSelectAgent = useCallback((target: string) => {
-    setSelection({ type: "agent", id: target });
-    setShowSettings(false);
-    setShowSecurity(false);
-  }, []);
+  // Select handler for agents — closes mobile drawer after selection
+  const handleSelectAgent = useCallback(
+    (target: string) => {
+      setSelection({ type: "agent", id: target });
+      setShowSettings(false);
+      setShowSecurity(false);
+      closeMobileDrawer();
+    },
+    [closeMobileDrawer],
+  );
 
   // Derive selectedTarget string for components that need it
   const selectedTarget = selection?.type === "agent" ? selection.id : null;
@@ -156,18 +168,28 @@ export function App() {
         .split("/")
         .pop() ?? agentProjectPath)
     : null;
+  // Split view is only available on non-mobile, non-narrow screens
   const showSplitView =
-    selection?.type === "agent" && agentProjectPath !== null && splitEnabled && !isNarrowScreen;
+    selection?.type === "agent" &&
+    agentProjectPath !== null &&
+    splitEnabled &&
+    !isNarrowScreen &&
+    !isMobileScreen;
 
-  // Select handler for project branch graph
+  // Select handler for project branch graph — closes mobile drawer
   const handleSelectProject = useCallback(
     (path: string, name: string) => {
       // In split-pane mode with matching project, switch tab instead of going fullscreen
-      if (splitEnabled && !isNarrowScreen && selection?.type === "agent" && agentProjectPath) {
+      if (
+        splitEnabled &&
+        !isNarrowScreen &&
+        !isMobileScreen &&
+        selection?.type === "agent" &&
+        agentProjectPath
+      ) {
         const matchesAgent = path === agentProjectPath;
         if (matchesAgent) {
           if (rightPanelTab === "git") {
-            // Already showing git tab — toggle split view off
             setSplitEnabled(false);
           } else {
             setRightPanelTab("git");
@@ -178,19 +200,34 @@ export function App() {
       setSelection({ type: "project", path, name });
       setShowSettings(false);
       setShowSecurity(false);
+      closeMobileDrawer();
     },
-    [splitEnabled, isNarrowScreen, selection, agentProjectPath, rightPanelTab, setSplitEnabled],
+    [
+      splitEnabled,
+      isNarrowScreen,
+      isMobileScreen,
+      selection,
+      agentProjectPath,
+      rightPanelTab,
+      setSplitEnabled,
+      closeMobileDrawer,
+    ],
   );
 
-  // Select handler for project markdown viewer
+  // Select handler for project markdown viewer — closes mobile drawer
   const handleSelectMarkdown = useCallback(
     (projectPath: string, projectName: string) => {
       // In split-pane mode with matching project, switch tab instead of going fullscreen
-      if (splitEnabled && !isNarrowScreen && selection?.type === "agent" && agentProjectPath) {
+      if (
+        splitEnabled &&
+        !isNarrowScreen &&
+        !isMobileScreen &&
+        selection?.type === "agent" &&
+        agentProjectPath
+      ) {
         const matchesAgent = projectPath === agentProjectPath;
         if (matchesAgent) {
           if (rightPanelTab === "markdown") {
-            // Already showing markdown tab — toggle split view off
             setSplitEnabled(false);
           } else {
             setRightPanelTab("markdown");
@@ -201,8 +238,18 @@ export function App() {
       setSelection({ type: "markdown", projectPath, projectName });
       setShowSettings(false);
       setShowSecurity(false);
+      closeMobileDrawer();
     },
-    [splitEnabled, isNarrowScreen, selection, agentProjectPath, rightPanelTab, setSplitEnabled],
+    [
+      splitEnabled,
+      isNarrowScreen,
+      isMobileScreen,
+      selection,
+      agentProjectPath,
+      rightPanelTab,
+      setSplitEnabled,
+      closeMobileDrawer,
+    ],
   );
 
   // Keyboard shortcuts handlers
@@ -285,78 +332,148 @@ export function App() {
     }
   }, [currentProject, registeredProjects]);
 
+  // Sidebar content shared between desktop sidebar and mobile drawer
+  const sidebarContent = (
+    <>
+      <AgentList
+        agents={aiAgents}
+        loading={loading}
+        selection={selection}
+        onSelectAgent={handleSelectAgent}
+        onSelectProject={handleSelectProject}
+        onSelectMarkdown={handleSelectMarkdown}
+        registeredProjects={registeredProjects}
+        worktrees={worktrees}
+        onSpawned={handleSpawned}
+        splitPaneProjectPath={showSplitView ? agentProjectPath : null}
+        splitPaneTab={showSplitView ? rightPanelTab : null}
+      />
+      <TerminalList
+        terminals={terminals}
+        selectedTarget={selectedTarget}
+        onSelect={handleSelectAgent}
+      />
+      <UsagePanel />
+    </>
+  );
+
   return (
     <div className="flex h-screen text-zinc-100">
-      {/* Sidebar */}
-      <aside
-        className={`glass flex shrink-0 flex-col transition-subtle ${
-          sidebarCollapsed ? "w-14" : "w-80"
-        }`}
-      >
-        <StatusBar
-          agentCount={aiAgents.length}
-          attentionCount={attentionCount}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={toggleSidebar}
-          onSettingsClick={() => {
-            setShowSettings((v) => !v);
-            setShowSecurity(false);
-          }}
-          onSecurityClick={() => {
-            setShowSecurity((v) => !v);
-            setShowSettings(false);
-          }}
+      {/* Mobile: overlay backdrop when drawer is open */}
+      {isMobileScreen && mobileDrawerOpen && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop tap to close
+        // biome-ignore lint/a11y/noStaticElementInteractions: backdrop tap to close
+        <div
+          className="fixed inset-0 z-40 bg-black/60 animate-fade-in"
+          onClick={closeMobileDrawer}
         />
-        {!sidebarCollapsed && (
-          <>
-            <AgentList
-              agents={aiAgents}
-              loading={loading}
-              selection={selection}
-              onSelectAgent={handleSelectAgent}
-              onSelectProject={handleSelectProject}
-              onSelectMarkdown={handleSelectMarkdown}
-              registeredProjects={registeredProjects}
-              worktrees={worktrees}
-              onSpawned={handleSpawned}
-              splitPaneProjectPath={showSplitView ? agentProjectPath : null}
-              splitPaneTab={showSplitView ? rightPanelTab : null}
-            />
-            <TerminalList
-              terminals={terminals}
-              selectedTarget={selectedTarget}
-              onSelect={handleSelectAgent}
-            />
-            <UsagePanel />
-          </>
-        )}
-        {sidebarCollapsed && (
-          <div className="flex flex-1 flex-col items-center gap-1 overflow-y-auto py-2">
-            {aiAgents.map((agent) => (
-              <button
-                key={agent.id}
-                type="button"
-                onClick={() => handleSelectAgent(agent.target)}
-                className={`h-8 w-8 rounded-lg text-[10px] transition-colors ${
-                  selectedTarget === agent.target
-                    ? "bg-cyan-500/20 text-cyan-400"
-                    : "text-zinc-500 hover:bg-white/10 hover:text-zinc-300"
-                }`}
-                title={agent.target}
+      )}
+
+      {/* Mobile drawer (off-canvas) */}
+      {isMobileScreen && (
+        <div
+          className={`fixed inset-y-0 left-0 z-50 flex w-80 flex-col glass border-r border-white/5 transition-transform duration-300 ease-out safe-top safe-bottom ${
+            mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+            <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-sm font-bold tracking-wide text-transparent">
+              tmai
+            </span>
+            <button
+              type="button"
+              onClick={closeMobileDrawer}
+              className="touch-target flex items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/10 hover:text-zinc-300"
+              title="Close navigation"
+              aria-label="Close navigation"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
               >
-                {statusName(agent.status) === "Processing"
-                  ? "●"
-                  : statusName(agent.status) === "AwaitingApproval"
-                    ? "◐"
-                    : "○"}
-              </button>
-            ))}
+                <title>Close</title>
+                <path d="M3 3l10 10M13 3L3 13" />
+              </svg>
+            </button>
           </div>
-        )}
-      </aside>
+          <div className="flex flex-1 flex-col overflow-y-auto">{sidebarContent}</div>
+        </div>
+      )}
+
+      {/* Desktop sidebar (not shown on mobile) */}
+      {!isMobileScreen && (
+        <aside
+          className={`glass flex shrink-0 flex-col transition-subtle ${
+            sidebarCollapsed ? "w-14" : "w-80"
+          }`}
+        >
+          <StatusBar
+            agentCount={aiAgents.length}
+            attentionCount={attentionCount}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
+            onSettingsClick={() => {
+              setShowSettings((v) => !v);
+              setShowSecurity(false);
+            }}
+            onSecurityClick={() => {
+              setShowSecurity((v) => !v);
+              setShowSettings(false);
+            }}
+          />
+          {!sidebarCollapsed && (
+            <div className="flex flex-1 flex-col overflow-y-auto">{sidebarContent}</div>
+          )}
+          {sidebarCollapsed && (
+            <div className="flex flex-1 flex-col items-center gap-1 overflow-y-auto py-2">
+              {aiAgents.map((agent) => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => handleSelectAgent(agent.target)}
+                  className={`h-8 w-8 rounded-lg text-[10px] transition-colors ${
+                    selectedTarget === agent.target
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : "text-zinc-500 hover:bg-white/10 hover:text-zinc-300"
+                  }`}
+                  title={agent.target}
+                >
+                  {statusName(agent.status) === "Processing"
+                    ? "●"
+                    : statusName(agent.status) === "AwaitingApproval"
+                      ? "◐"
+                      : "○"}
+                </button>
+              ))}
+            </div>
+          )}
+        </aside>
+      )}
 
       {/* Main area */}
       <main className="flex flex-1 flex-col overflow-hidden transition-subtle">
+        {/* Mobile top bar */}
+        {isMobileScreen && (
+          <StatusBar
+            agentCount={aiAgents.length}
+            attentionCount={attentionCount}
+            isMobile
+            onMobileMenuClick={toggleMobileDrawer}
+            onSettingsClick={() => {
+              setShowSettings((v) => !v);
+              setShowSecurity(false);
+            }}
+            onSecurityClick={() => {
+              setShowSecurity((v) => !v);
+              setShowSettings(false);
+            }}
+          />
+        )}
+
         {showSecurity ? (
           <div className="flex flex-1 flex-col overflow-hidden animate-scale-in">
             <SecurityPanel onClose={() => setShowSecurity(false)} />
@@ -377,8 +494,8 @@ export function App() {
               worktrees={worktrees}
               agents={aiAgents}
               onFocusAgent={handleSelectAgent}
-              actionPanelCollapsed={actionPanelCollapsed}
-              onToggleActionPanel={toggleActionPanel}
+              actionPanelCollapsed={actionPanelCollapsed || isMobileScreen}
+              onToggleActionPanel={isMobileScreen ? undefined : toggleActionPanel}
             />
           </div>
         ) : selection?.type === "markdown" ? (
@@ -467,14 +584,18 @@ export function App() {
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center animate-fade-in">
-                <div className="glass-light rounded-2xl px-12 py-10 text-center transition-subtle hover:glass">
+                <div className="glass-light rounded-2xl px-8 py-8 text-center transition-subtle hover:glass mx-4">
                   <h1 className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
                     tmai
                   </h1>
                   <p className="mt-2 text-sm text-zinc-500">
                     {agents.length > 0
-                      ? "Select an agent to view • Press ? for shortcuts"
-                      : "Click + on a project to spawn an agent • Press ? for shortcuts"}
+                      ? isMobileScreen
+                        ? "Tap ☰ to select an agent"
+                        : "Select an agent to view • Press ? for shortcuts"
+                      : isMobileScreen
+                        ? "Tap ☰ then + on a project to spawn an agent"
+                        : "Click + on a project to spawn an agent • Press ? for shortcuts"}
                   </p>
                 </div>
               </div>

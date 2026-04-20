@@ -779,12 +779,12 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
       )}
 
       {/* Footer status bar */}
-      <div className="flex items-center gap-2 border-t border-white/5 px-3 py-1">
+      <div className="flex items-center gap-2 border-t border-white/5 px-3 py-1.5">
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={focused ? enterSelectMode : enterInputMode}
-          className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
+          className={`touch-target-sm rounded px-2 py-1 text-xs transition-colors ${
             focused ? "bg-cyan-500/20 text-cyan-400" : "bg-amber-500/20 text-amber-400"
           }`}
           title={
@@ -799,7 +799,7 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setAutoScroll((v) => !v)}
-          className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
+          className={`touch-target-sm rounded px-2 py-1 text-xs transition-colors ${
             autoScroll
               ? "bg-cyan-500/15 text-cyan-400"
               : "bg-white/5 text-zinc-600 hover:text-zinc-400"
@@ -812,7 +812,7 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setShowCursor((v) => !v)}
-          className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
+          className={`touch-target-sm rounded px-2 py-1 text-xs transition-colors ${
             showCursor
               ? "bg-cyan-500/15 text-cyan-400"
               : "bg-white/5 text-zinc-600 hover:text-zinc-400"
@@ -848,7 +848,7 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
           />
         </div>
         <div className="flex-1" />
-        <span className="text-[10px] text-zinc-600">
+        <span className="hidden text-[10px] text-zinc-600 sm:block">
           {focused ? "click to select" : "Enter or click ⌨ to input"}
         </span>
       </div>
