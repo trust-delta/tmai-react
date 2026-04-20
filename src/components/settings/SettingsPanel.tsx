@@ -12,6 +12,7 @@ import {
   type WorktreeSettings,
 } from "@/lib/api";
 import { buildNotifyEventHelp } from "./notify-event-help";
+import { ScheduledKicksSection } from "./ScheduledKicksSection";
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -871,6 +872,9 @@ export function SettingsPanel({ onClose, onProjectsChanged }: SettingsPanelProps
             </div>
           </section>
         )}
+
+        {/* Scheduled kicks / Routines section */}
+        <ScheduledKicksSection />
 
         {/* Usage monitoring section */}
         {usageSettings && (

@@ -253,4 +253,13 @@ export const api = {
   // Teams (HTTP only for now)
   listTeams: (): Promise<TeamSummary[]> => httpApi.listTeams(),
   getTeamTasks: (teamName: string): Promise<TeamTaskInfo[]> => httpApi.getTeamTasks(teamName),
+
+  // Scheduled kicks (Routines parity — #2)
+  listScheduledKicks: () => httpApi.listScheduledKicks(),
+  createScheduledKick: (kick: Parameters<typeof httpApi.createScheduledKick>[0]) =>
+    httpApi.createScheduledKick(kick),
+  updateScheduledKick: (id: string, updates: Parameters<typeof httpApi.updateScheduledKick>[1]) =>
+    httpApi.updateScheduledKick(id, updates),
+  deleteScheduledKick: (id: string) => httpApi.deleteScheduledKick(id),
+  dryRunKick: (id: string) => httpApi.dryRunKick(id),
 };

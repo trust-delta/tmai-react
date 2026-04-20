@@ -722,6 +722,46 @@ export interface WorktreeSettings {
   branch_depth_warning: number;
 }
 
+// ── Scheduled kicks (Routines parity — #2) ──
+
+/** Interval-based or cron-based schedule for an orchestrator kick */
+export type ScheduleSpec =
+  | { type: "interval"; seconds: number }
+  | { type: "cron"; expression: string };
+
+/** Gating predicates from #443 — conditions that suppress the kick */
+export type GatingPredicate = "any_time" | "no_active_agents" | "orchestrator_idle";
+
+export interface ScheduledKick {
+  id: string;
+  schedule: ScheduleSpec;
+  prompt: string;
+  gating_predicate: GatingPredicate;
+  enabled: boolean;
+  last_fire: string | null;
+  next_fire: string | null;
+}
+
+export interface ScheduledKickCreate {
+  id: string;
+  schedule: ScheduleSpec;
+  prompt: string;
+  gating_predicate?: GatingPredicate;
+  enabled?: boolean;
+}
+
+export interface ScheduledKickUpdate {
+  schedule?: ScheduleSpec;
+  prompt?: string;
+  gating_predicate?: GatingPredicate;
+  enabled?: boolean;
+}
+
+export interface DryRunResult {
+  rendered_prompt: string;
+  next_fire: string | null;
+}
+
 export interface PreviewSettingsResponse {
   show_cursor: boolean;
   preview_poll_focused_ms: number;
@@ -1157,6 +1197,27 @@ export const api = {
   listTeams: () => apiFetch<import("./teams").TeamSummary[]>("/teams"),
   getTeamTasks: (teamName: string) =>
     apiFetch<import("./teams").TeamTaskInfo[]>(`/teams/${encodeURIComponent(teamName)}/tasks`),
+
+  // Scheduled kicks (Routines parity — #2)
+  listScheduledKicks: () => apiFetch<ScheduledKick[]>("/settings/kicks"),
+  createScheduledKick: (kick: ScheduledKickCreate) =>
+    apiFetch<ScheduledKick>("/settings/kicks", {
+      method: "POST",
+      body: JSON.stringify(kick),
+    }),
+  updateScheduledKick: (id: string, updates: ScheduledKickUpdate) =>
+    apiFetch<ScheduledKick>(`/settings/kicks/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }),
+  deleteScheduledKick: (id: string) =>
+    apiFetch<{ status: string }>(`/settings/kicks/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+  dryRunKick: (id: string) =>
+    apiFetch<DryRunResult>(`/settings/kicks/${encodeURIComponent(id)}/dry-run`, {
+      method: "POST",
+    }),
 };
 
 // ── SSE event subscription ──
