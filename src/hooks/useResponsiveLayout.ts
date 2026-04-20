@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 const STORAGE_KEY_SIDEBAR = "tmai:sidebar-collapsed";
 const STORAGE_KEY_ACTION_PANEL = "tmai:action-panel-collapsed";
 const NARROW_BREAKPOINT = "(min-width: 1024px)";
+const MOBILE_BREAKPOINT = "(min-width: 768px)";
 
 // Read a boolean from localStorage with a fallback default
 function readStoredBool(key: string, fallback: boolean): boolean {
@@ -21,13 +22,24 @@ export interface UseResponsiveLayoutResult {
   actionPanelCollapsed: boolean;
   toggleActionPanel: () => void;
   isNarrowScreen: boolean;
+  /** true when viewport width < 768px — triggers mobile drawer/overlay layout */
+  isMobileScreen: boolean;
+  /** Mobile sidebar drawer open state (separate from desktop collapsed state) */
+  mobileDrawerOpen: boolean;
+  toggleMobileDrawer: () => void;
+  closeMobileDrawer: () => void;
 }
 
-// Manage responsive layout state: sidebar collapse, action panel collapse, narrow screen detection
+// Manage responsive layout state: sidebar collapse, action panel collapse, narrow/mobile screen detection
 export function useResponsiveLayout(): UseResponsiveLayoutResult {
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => {
     if (typeof window === "undefined") return false;
     return !window.matchMedia(NARROW_BREAKPOINT).matches;
+  });
+
+  const [isMobileScreen, setIsMobileScreen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !window.matchMedia(MOBILE_BREAKPOINT).matches;
   });
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -44,6 +56,9 @@ export function useResponsiveLayout(): UseResponsiveLayoutResult {
     return readStoredBool(STORAGE_KEY_ACTION_PANEL, false);
   });
 
+  // Mobile drawer is always closed initially; opened via hamburger button
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
   // Track narrow screen via matchMedia
   useEffect(() => {
     const mql = window.matchMedia(NARROW_BREAKPOINT);
@@ -51,10 +66,22 @@ export function useResponsiveLayout(): UseResponsiveLayoutResult {
       const narrow = !e.matches;
       setIsNarrowScreen(narrow);
       if (narrow) {
-        // Auto-collapse both panels on narrow screens
         setSidebarCollapsed(true);
         setActionPanelCollapsed(true);
       }
+    };
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  // Track mobile screen via matchMedia
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_BREAKPOINT);
+    const handler = (e: MediaQueryListEvent) => {
+      const mobile = !e.matches;
+      setIsMobileScreen(mobile);
+      // Close drawer when switching to desktop
+      if (!mobile) setMobileDrawerOpen(false);
     };
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
@@ -89,11 +116,23 @@ export function useResponsiveLayout(): UseResponsiveLayoutResult {
     });
   }, []);
 
+  const toggleMobileDrawer = useCallback(() => {
+    setMobileDrawerOpen((prev) => !prev);
+  }, []);
+
+  const closeMobileDrawer = useCallback(() => {
+    setMobileDrawerOpen(false);
+  }, []);
+
   return {
     sidebarCollapsed,
     toggleSidebar,
     actionPanelCollapsed,
     toggleActionPanel,
     isNarrowScreen,
+    isMobileScreen,
+    mobileDrawerOpen,
+    toggleMobileDrawer,
+    closeMobileDrawer,
   };
 }

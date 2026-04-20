@@ -542,14 +542,15 @@ export function BranchGraph({
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="glass shrink-0 border-b border-white/5 px-6 py-4">
-        <div className="flex items-center gap-3">
+      <div className="glass shrink-0 border-b border-white/5 px-4 py-3 md:px-6 md:py-4">
+        {/* Row 1: icon + name + tab switcher */}
+        <div className="flex flex-wrap items-center gap-2">
           <svg
-            width="20"
-            height="20"
+            width="18"
+            height="18"
             viewBox="0 0 16 16"
             fill="none"
-            className="text-emerald-400"
+            className="shrink-0 text-emerald-400"
             role="img"
             aria-label="Branch graph"
           >
@@ -560,7 +561,9 @@ export function BranchGraph({
             <line x1="4" y1="6" x2="4" y2="10" stroke="currentColor" strokeWidth="1.5" />
             <path d="M4 6 C4 8, 8 8, 12 8" stroke="currentColor" strokeWidth="1.5" fill="none" />
           </svg>
-          <h2 className="text-lg font-semibold text-zinc-100">{projectName}</h2>
+          <h2 className="truncate text-base font-semibold text-zinc-100 md:text-lg">
+            {projectName}
+          </h2>
           {/* Tab switcher */}
           <div className="flex gap-1 rounded-lg bg-white/5 p-0.5">
             <button
@@ -569,7 +572,7 @@ export function BranchGraph({
                 setShowIssues(false);
                 setSelectedIssue(null);
               }}
-              className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+              className={`touch-target-sm rounded-md px-2.5 py-1 text-xs transition-colors ${
                 !showIssues ? "bg-white/10 text-zinc-200" : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
@@ -578,60 +581,62 @@ export function BranchGraph({
             <button
               type="button"
               onClick={() => setShowIssues(true)}
-              className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+              className={`touch-target-sm rounded-md px-2.5 py-1 text-xs transition-colors ${
                 showIssues ? "bg-white/10 text-zinc-200" : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               Issues{issues.length > 0 ? ` (${issues.length})` : ""}
             </button>
           </div>
-          <span className="text-xs text-zinc-500">
-            {!showIssues && (
-              <>
-                {branchCount} branch{branchCount !== 1 ? "es" : ""}
-                {(() => {
-                  const wtCount = projectWorktrees.filter((w) => !w.is_main).length;
-                  if (wtCount === 0) return null;
-                  return ` (${wtCount} worktree${wtCount !== 1 ? "s" : ""})`;
-                })()}
-                {graphData && (
-                  <>
-                    {" \u00B7 "}
-                    {graphData.total_count} commit
-                    {graphData.total_count !== 1 ? "s" : ""}
-                  </>
-                )}
-              </>
-            )}
-          </span>
           <div className="flex-1" />
-          {branches?.last_fetch && (
-            <span
-              className="text-[10px] text-zinc-600"
-              title={new Date(branches.last_fetch * 1000).toLocaleString()}
-            >
-              fetched {formatRelativeTime(branches.last_fetch)}
-            </span>
-          )}
-          {!showIssues && mergedBranches.length > 0 && (
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5">
+            {branches?.last_fetch && (
+              <span
+                className="hidden text-[10px] text-zinc-600 md:block"
+                title={new Date(branches.last_fetch * 1000).toLocaleString()}
+              >
+                fetched {formatRelativeTime(branches.last_fetch)}
+              </span>
+            )}
+            {!showIssues && mergedBranches.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBulkDeleteMerged}
+                disabled={bulkDeleteBusy}
+                className="touch-target-sm rounded-lg bg-red-500/10 px-2.5 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50"
+              >
+                {bulkDeleteBusy ? "Deleting..." : `Delete Merged (${mergedBranches.length})`}
+              </button>
+            )}
             <button
               type="button"
-              onClick={handleBulkDeleteMerged}
-              disabled={bulkDeleteBusy}
-              className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50"
+              onClick={handleRefresh}
+              disabled={refreshBusy}
+              className="touch-target-sm rounded-lg bg-white/5 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-200 disabled:opacity-50"
             >
-              {bulkDeleteBusy ? "Deleting..." : `Delete Merged (${mergedBranches.length})`}
+              {refreshBusy ? "..." : "Refresh"}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshBusy}
-            className="rounded-lg bg-white/5 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-200 disabled:opacity-50"
-          >
-            {refreshBusy ? "..." : "Refresh"}
-          </button>
+          </div>
         </div>
+        {/* Row 2: stats (hidden on smallest screens) */}
+        {!showIssues && (
+          <div className="mt-1 hidden text-xs text-zinc-500 sm:block">
+            {branchCount} branch{branchCount !== 1 ? "es" : ""}
+            {(() => {
+              const wtCount = projectWorktrees.filter((w) => !w.is_main).length;
+              if (wtCount === 0) return null;
+              return ` (${wtCount} worktree${wtCount !== 1 ? "s" : ""})`;
+            })()}
+            {graphData && (
+              <>
+                {" \u00B7 "}
+                {graphData.total_count} commit
+                {graphData.total_count !== 1 ? "s" : ""}
+              </>
+            )}
+          </div>
+        )}
         {refreshError && <div className="mt-2 text-xs text-red-400">{refreshError}</div>}
       </div>
 

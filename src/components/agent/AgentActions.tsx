@@ -45,11 +45,11 @@ export function AgentActions({ agent, passthrough }: AgentActionsProps) {
   }, [needsPermission, handleApprove]);
 
   return (
-    <div className="glass flex items-center gap-2 border-0 border-b border-white/5 px-3 py-2">
-      <span className="text-sm font-medium text-zinc-300">{agent.display_name}</span>
+    <div className="glass flex flex-wrap items-center gap-2 border-0 border-b border-white/5 px-3 py-2">
+      <span className="truncate text-sm font-medium text-zinc-300">{agent.display_name}</span>
       <span
         className={cn(
-          "rounded px-1.5 py-0.5 text-xs",
+          "shrink-0 rounded px-1.5 py-0.5 text-xs",
           needsPermission && "bg-red-500/20 text-red-400",
           isProcessing && "bg-cyan-500/20 text-cyan-400",
           isIdle && "bg-zinc-500/20 text-zinc-400",
@@ -66,7 +66,7 @@ export function AgentActions({ agent, passthrough }: AgentActionsProps) {
           <button
             type="button"
             onClick={handleApprove}
-            className="rounded-md bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/30"
+            className="touch-target-sm rounded-md bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/30"
             title="Ctrl+Enter"
           >
             Approve
@@ -74,7 +74,7 @@ export function AgentActions({ agent, passthrough }: AgentActionsProps) {
           <button
             type="button"
             onClick={handleReject}
-            className="glass-card rounded-md px-3 py-1 text-xs font-medium text-zinc-300 transition-colors"
+            className="touch-target-sm glass-card rounded-md px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors"
           >
             Reject
           </button>
@@ -84,7 +84,7 @@ export function AgentActions({ agent, passthrough }: AgentActionsProps) {
       <button
         type="button"
         onClick={handleKill}
-        className="rounded-md px-2 py-1 text-xs text-zinc-600 transition-colors hover:text-red-400"
+        className="touch-target-sm rounded-md px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:text-red-400"
         title="Kill agent"
       >
         Kill

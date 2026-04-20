@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // Tests for PTY mode conversation panel selection / scroll UX (#4).
-import { render, screen, waitFor } from "@testing-library/react";
-import { fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 global.ResizeObserver = class ResizeObserver {

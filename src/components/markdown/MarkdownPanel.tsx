@@ -47,6 +47,8 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editable, setEditable] = useState(false);
+  // Mobile: file tree panel open/closed
+  const [treeOpen, setTreeOpen] = useState(false);
 
   // Fetch file tree
   useEffect(() => {
@@ -64,6 +66,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
     setEditing(false);
     setSaveError(null);
     setFileLoading(true);
+    setTreeOpen(false); // Close tree drawer after selecting on mobile
     api
       .readFile(path)
       .then((data) => {
@@ -99,17 +102,52 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
     }
   }, [tree, selectedFile, loadFile]);
 
+  const fileTree = (
+    <>
+      {loading ? (
+        <div className="px-3 py-2 text-xs text-zinc-500">Loading...</div>
+      ) : tree.length === 0 ? (
+        <div className="px-3 py-2 text-xs text-zinc-500">No markdown files</div>
+      ) : (
+        <TreeNode entries={tree} selectedFile={selectedFile} onSelect={loadFile} depth={0} />
+      )}
+    </>
+  );
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="glass shrink-0 border-b border-white/5 px-6 py-4">
+      <div className="glass shrink-0 border-b border-white/5 px-4 py-3">
         <div className="flex items-center gap-3">
+          {/* Mobile: toggle file tree button */}
+          <button
+            type="button"
+            onClick={() => setTreeOpen((v) => !v)}
+            className="touch-target flex items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/10 hover:text-zinc-300 md:hidden"
+            title="Toggle file list"
+            aria-label="Toggle file list"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <title>Files</title>
+              <rect x="2" y="2" width="5" height="5" rx="0.5" />
+              <rect x="9" y="2" width="5" height="5" rx="0.5" />
+              <rect x="2" y="9" width="5" height="5" rx="0.5" />
+              <rect x="9" y="9" width="5" height="5" rx="0.5" />
+            </svg>
+          </button>
           <svg
             width="20"
             height="20"
             viewBox="0 0 16 16"
             fill="none"
-            className="text-blue-400"
+            className="hidden shrink-0 text-blue-400 md:block"
             role="img"
             aria-label="Document icon"
           >
@@ -152,28 +190,37 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
               opacity="0.5"
             />
           </svg>
-          <h2 className="text-lg font-semibold text-zinc-100">{projectName}</h2>
-          <span className="text-xs text-zinc-500">Markdown</span>
+          <h2 className="truncate text-base font-semibold text-zinc-100">{projectName}</h2>
+          <span className="shrink-0 text-xs text-zinc-500">Markdown</span>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: File tree */}
-        <div className="w-56 shrink-0 overflow-y-auto border-r border-white/5 bg-black/10 py-2">
-          {loading ? (
-            <div className="px-3 py-2 text-xs text-zinc-500">Loading...</div>
-          ) : tree.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-zinc-500">No markdown files</div>
-          ) : (
-            <TreeNode entries={tree} selectedFile={selectedFile} onSelect={loadFile} depth={0} />
-          )}
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Mobile: file tree as overlay drawer */}
+        {treeOpen && (
+          <>
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop tap to close */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop tap to close */}
+            <div
+              className="absolute inset-0 z-10 bg-black/50 md:hidden"
+              onClick={() => setTreeOpen(false)}
+            />
+            <div className="absolute inset-y-0 left-0 z-20 w-56 overflow-y-auto border-r border-white/5 bg-zinc-950 py-2 md:hidden animate-slide-in-left">
+              {fileTree}
+            </div>
+          </>
+        )}
+
+        {/* Desktop: file tree as persistent sidebar */}
+        <div className="hidden w-56 shrink-0 overflow-y-auto border-r border-white/5 bg-black/10 py-2 md:block">
+          {fileTree}
         </div>
 
         {/* Right: Preview / Editor */}
         <div className="flex flex-1 flex-col overflow-auto">
           {!selectedFile ? (
             <div className="flex items-center justify-center py-20 text-sm text-zinc-500">
-              Select a file to preview
+              {treeOpen ? null : "Select a file to preview"}
             </div>
           ) : fileLoading ? (
             <div className="flex items-center justify-center py-20 text-sm text-zinc-500">
@@ -190,7 +237,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="rounded bg-blue-500/20 px-3 py-1 text-xs text-blue-400 hover:bg-blue-500/30 disabled:opacity-50"
+                  className="touch-target-sm rounded bg-blue-500/20 px-3 py-1 text-xs text-blue-400 hover:bg-blue-500/30 disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
@@ -201,7 +248,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
                     setEditContent(content);
                     setSaveError(null);
                   }}
-                  className="rounded bg-white/5 px-3 py-1 text-xs text-zinc-400 hover:bg-white/10"
+                  className="touch-target-sm rounded bg-white/5 px-3 py-1 text-xs text-zinc-400 hover:bg-white/10"
                 >
                   Cancel
                 </button>
@@ -214,7 +261,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="flex-1 resize-none bg-transparent px-6 py-4 font-mono text-sm text-zinc-200 outline-none"
+                className="flex-1 resize-none bg-transparent px-4 py-4 font-mono text-sm text-zinc-200 outline-none md:px-6"
                 spellCheck={false}
               />
             </div>
@@ -229,7 +276,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
                   <button
                     type="button"
                     onClick={() => setEditing(true)}
-                    className="rounded bg-white/5 px-3 py-1 text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+                    className="touch-target-sm rounded bg-white/5 px-3 py-1 text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
                   >
                     Edit
                   </button>
@@ -238,7 +285,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
                 )}
               </div>
               {/* Content: markdown preview or code view */}
-              <div className="flex-1 overflow-auto px-6 py-4">
+              <div className="flex-1 overflow-auto px-4 py-4 md:px-6">
                 {selectedFile.endsWith(".md") ? (
                   <div
                     className="prose prose-invert prose-sm max-w-none
@@ -247,7 +294,7 @@ export function MarkdownPanel({ projectPath, projectName }: MarkdownPanelProps) 
                     prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
                     prose-strong:text-zinc-200
                     prose-code:text-cyan-400 prose-code:bg-white/5 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
-                    prose-pre:bg-zinc-900/50 prose-pre:border prose-pre:border-white/5 prose-pre:rounded-lg
+                    prose-pre:bg-zinc-900/50 prose-pre:border prose-pre:border-white/5 prose-pre:rounded-lg prose-pre:overflow-x-auto
                     prose-li:text-zinc-300
                     prose-th:text-zinc-300 prose-th:border-white/10
                     prose-td:text-zinc-400 prose-td:border-white/10
@@ -329,8 +376,8 @@ function TreeNode({
                     return next;
                   })
                 }
-                className="flex w-full items-center gap-1 px-2 py-1 text-left text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
-                style={{ paddingLeft: 8 + depth * 12 }}
+                className="flex w-full items-center gap-1 py-1.5 text-left text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                style={{ paddingLeft: 8 + depth * 12, paddingRight: 8 }}
               >
                 <span className="text-[9px]">{isCollapsed ? "\u25B8" : "\u25BE"}</span>
                 <span className="truncate">{entry.name}</span>
@@ -352,14 +399,14 @@ function TreeNode({
             type="button"
             key={entry.path}
             onClick={() => onSelect(entry.path)}
-            className={`flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] transition-colors ${
+            className={`flex w-full items-center gap-1.5 py-1.5 text-left text-[11px] transition-colors ${
               isSelected
                 ? "bg-blue-500/10 text-blue-400"
                 : entry.openable
                   ? "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                   : "text-zinc-600 hover:bg-white/[0.03] hover:text-zinc-400"
             }`}
-            style={{ paddingLeft: 8 + depth * 12 }}
+            style={{ paddingLeft: 8 + depth * 12, paddingRight: 8 }}
           >
             <span
               className={`shrink-0 text-[10px] ${

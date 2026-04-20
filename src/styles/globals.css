@@ -200,6 +200,41 @@ body {
   animation: slideInRight 0.3s ease-out;
 }
 
+/* ── Mobile / touch utilities ─────────────────────────────────────────── */
+
+/* Minimum 44×44 px tap target (WCAG 2.5.5) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Smaller variant — 36 px — for dense toolbars that still need decent touch area */
+.touch-target-sm {
+  min-height: 36px;
+}
+
+/* iOS safe-area insets so content is not hidden under the notch/home indicator */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent rubber-band scroll on the root shell; individual panels use overflow-y-auto */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Prevent text size adjustment on orientation change (iOS Safari) */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ── End mobile utilities ──────────────────────────────────────────────── */
+
 /* Thin overlay scrollbar — applied globally to all scrollable areas */
 *::-webkit-scrollbar {
   width: 6px;
