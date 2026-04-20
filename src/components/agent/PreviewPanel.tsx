@@ -1,8 +1,12 @@
 import { AnsiUp } from "ansi_up";
 import DOMPurify from "dompurify";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { QueueBadge } from "@/components/ui/QueueBadge";
+import { QueuePopover } from "@/components/ui/QueuePopover";
+import { useQueuedPrompts } from "@/hooks/useQueuedPrompts";
 import { api } from "@/lib/api";
 import type { PreviewSettingsResponse, TranscriptRecord } from "@/lib/api-http";
+import type { ActionOrigin } from "@/types";
 import {
   capHistoryLines,
   charColumns,
@@ -64,6 +68,19 @@ function toTmuxKey(e: KeyboardEvent): string | null {
   }
 }
 
+// Render an ActionOrigin discriminated union as a compact label, e.g.
+// "Human:webui", "Agent:main:0.0", "System:pr_monitor"
+function originLabel(o: ActionOrigin): string {
+  switch (o.kind) {
+    case "Human":
+      return `Human:${o.interface}`;
+    case "Agent":
+      return `Agent:${o.id}`;
+    case "System":
+      return `System:${o.subsystem}`;
+  }
+}
+
 // Per-agent auto-scroll preference (persists across agent switches)
 const agentAutoScrollMap = new Map<string, boolean>();
 
@@ -102,6 +119,8 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
   const [cursorPos, setCursorPos] = useState<CursorPos | null>(null);
   const [showCursor, setShowCursor] = useState(true);
   const [focused, setFocused] = useState(true);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const { items: queueItems, cancel: cancelQueueItem } = useQueuedPrompts(agentId);
   const [composing, setComposing] = useState(false);
   // Mirror `composing` into a ref so fetchPreview / poll-tick closures can
   // read the current composition state without being re-created (which
@@ -754,6 +773,32 @@ export function PreviewPanel({ agentId }: PreviewPanelProps) {
         >
           {showCursor ? "▮ Cursor" : "▯ Cursor"}
         </button>
+        <div className="relative">
+          <QueueBadge
+            count={queueItems.length}
+            onClick={() => setQueueOpen((v) => !v)}
+            icon="✉"
+            title={`${queueItems.length} prompt${queueItems.length !== 1 ? "s" : ""} queued — click to view`}
+          />
+          <QueuePopover
+            items={queueItems}
+            isOpen={queueOpen && queueItems.length > 0}
+            onClose={() => setQueueOpen(false)}
+            onCancel={cancelQueueItem}
+            title="Queued Prompts"
+            renderItem={(item) => (
+              <div>
+                <p className="truncate text-[11px] text-zinc-200" title={item.prompt}>
+                  {item.prompt}
+                </p>
+                <p className="mt-0.5 text-[10px] text-zinc-500">
+                  {item.origin && <span className="mr-2">{originLabel(item.origin)}</span>}
+                  {new Date(item.queued_at).toLocaleTimeString()}
+                </p>
+              </div>
+            )}
+          />
+        </div>
         <div className="flex-1" />
         <span className="text-[10px] text-zinc-600">
           {focused ? "click to select" : "Enter or click ⌨ to input"}

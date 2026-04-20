@@ -146,6 +146,17 @@ export interface AgentSnapshot {
   is_orchestrator?: boolean;
 }
 
+// ── Prompt Queue ──
+
+import type { ActionOrigin } from "@/types";
+
+export interface QueuedPrompt {
+  id: string;
+  prompt: string;
+  queued_at: string; // RFC 3339
+  origin?: ActionOrigin;
+}
+
 // ── Project grouping ──
 
 // A worktree (or main) within a project, containing agents
@@ -832,6 +843,13 @@ export const api = {
     ),
   getTranscript: (target: string) =>
     apiFetch<{ records: TranscriptRecord[] }>(`/agents/${encodeURIComponent(target)}/transcript`),
+  getPromptQueue: (agentId: string) =>
+    apiFetch<QueuedPrompt[]>(`/agents/${encodeURIComponent(agentId)}/prompt-queue`),
+  cancelQueuedPrompt: (agentId: string, promptId: string) =>
+    apiFetch<{ status: "cancelled" | "already_drained" }>(
+      `/agents/${encodeURIComponent(agentId)}/prompt-queue/${encodeURIComponent(promptId)}`,
+      { method: "DELETE" },
+    ),
 
   // Spawn
   spawnPty: (req: SpawnRequest) =>
