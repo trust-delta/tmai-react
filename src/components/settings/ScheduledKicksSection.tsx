@@ -231,7 +231,7 @@ function KickForm({
                 value={form.intervalSecs}
                 onChange={(e) => {
                   const v = Number.parseInt(e.target.value, 10);
-                  if (!Number.isNaN(v) && v > 0) setForm({ ...form, intervalSecs: v });
+                  if (!Number.isNaN(v) && v >= 60) setForm({ ...form, intervalSecs: v });
                 }}
                 className="w-24 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-zinc-200 outline-none focus:border-cyan-500/30"
               />
@@ -351,7 +351,7 @@ function KickRow({
       <div className="flex items-center gap-2">
         <Toggle checked={kick.enabled} onChange={onToggleEnabled} />
         <code className="flex-1 text-xs text-zinc-200 font-mono truncate">{kick.id}</code>
-        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <button
             type="button"
             onClick={onDryRun}
@@ -407,6 +407,8 @@ function KickRow({
 export function ScheduledKicksSection() {
   const [kicks, setKicks] = useState<ScheduledKick[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null); // kick id, or "~new"
   const [dryRunResult, setDryRunResult] = useState<{
     kickId: string;
@@ -416,13 +418,17 @@ export function ScheduledKicksSection() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
+    setFetchError("");
     api
       .listScheduledKicks()
       .then((ks) => {
         setKicks(ks);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e) => {
+        setFetchError(e instanceof Error ? e.message : "Failed to load routines");
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -442,9 +448,14 @@ export function ScheduledKicksSection() {
   };
 
   const handleDelete = async (id: string) => {
-    await api.deleteScheduledKick(id);
-    setDeleteConfirmId(null);
-    refresh();
+    setDeleteError("");
+    try {
+      await api.deleteScheduledKick(id);
+      setDeleteConfirmId(null);
+      refresh();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Delete failed");
+    }
   };
 
   const handleToggleEnabled = async (kick: ScheduledKick, enabled: boolean) => {
@@ -494,6 +505,13 @@ export function ScheduledKicksSection() {
           />
         )}
 
+        {/* Fetch error */}
+        {fetchError && (
+          <p className="rounded-md border border-red-500/20 bg-red-500/5 px-3 py-2 text-[11px] text-red-400">
+            {fetchError}
+          </p>
+        )}
+
         {/* Kick list */}
         {loading ? (
           <p className="py-4 text-center text-xs text-zinc-600">Loading…</p>
@@ -520,6 +538,7 @@ export function ScheduledKicksSection() {
                       Delete routine <code className="font-mono">{kick.id}</code>? This cannot be
                       undone.
                     </p>
+                    {deleteError && <p className="text-[11px] text-red-400">{deleteError}</p>}
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -530,7 +549,10 @@ export function ScheduledKicksSection() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDeleteConfirmId(null)}
+                        onClick={() => {
+                          setDeleteConfirmId(null);
+                          setDeleteError("");
+                        }}
                         className="rounded-md px-3 py-1 text-xs text-zinc-500 transition-colors hover:bg-white/10 hover:text-zinc-300"
                       >
                         Cancel

@@ -205,6 +205,31 @@ describe("ScheduledKicksSection", () => {
     });
   });
 
+  it("shows error message when list fetch fails", async () => {
+    vi.mocked(api.listScheduledKicks).mockRejectedValue(new Error("network error"));
+    render(<ScheduledKicksSection />);
+    await waitFor(() => {
+      expect(screen.getByText("network error")).toBeTruthy();
+    });
+  });
+
+  it("shows delete error inline when deleteScheduledKick fails", async () => {
+    vi.mocked(api.listScheduledKicks).mockResolvedValue([KICK_INTERVAL]);
+    vi.mocked(api.deleteScheduledKick).mockRejectedValue(new Error("permission denied"));
+    render(<ScheduledKicksSection />);
+    await waitFor(() => screen.getByText("morning-standup"));
+
+    fireEvent.click(screen.getByText("Delete"));
+    await waitFor(() => screen.getByText(/Delete routine/));
+
+    const confirmButtons = screen.getAllByText("Delete");
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(screen.getByText("permission denied")).toBeTruthy();
+    });
+  });
+
   it("shows dry-run result panel", async () => {
     vi.mocked(api.listScheduledKicks).mockResolvedValue([KICK_INTERVAL]);
     vi.mocked(api.dryRunKick).mockResolvedValue({
