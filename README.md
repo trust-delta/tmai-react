@@ -1,6 +1,6 @@
 # tmai-react
 
-> 🏠 **Project hub**: [`trust-delta/tmai`](https://github.com/trust-delta/tmai) — start there for binary installs, overview, and a map of all sub-repos.
+> ⚠️ **Archived 2026-04-23** — this repository is read-only. Contents are consolidated into [`trust-delta/tmai`](https://github.com/trust-delta/tmai) under `clients/react/`; install the latest binaries from <https://github.com/trust-delta/tmai/releases>.
 
 Public reference WebUI for [tmai-core](https://github.com/trust-delta/tmai-core) — a React/TypeScript client that speaks the HTTP + SSE contract defined by [tmai-api-spec](https://github.com/trust-delta/tmai-api-spec).
 
